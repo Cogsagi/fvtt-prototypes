@@ -9,10 +9,21 @@ fvtt-prototypes is a Foundry Virtual Tabletop (VTT) module built with plain Java
 - **Language**: JavaScript (ES Modules)
 - **Platform**: Foundry VTT (module)
 
+## Documentation Index
+
+| File | Purpose |
+|------|---------|
+| `.context/substrate.md` | **Start here.** Project overview, key concepts, and conventions. |
+| `.context/architecture/overview.md` | Module lifecycle, directory layout, and component patterns. |
+
 ## Project Structure
 
 ```
 /
+├── .context/            # Structured project documentation
+│   ├── substrate.md     # Entry point — project overview
+│   └── architecture/
+│       └── overview.md  # Architecture and patterns
 ├── module.json          # Foundry VTT module manifest
 ├── scripts/             # JavaScript source files
 ├── styles/              # CSS stylesheets

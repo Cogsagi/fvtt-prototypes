@@ -1,8 +1,8 @@
-# fvtt-prototypes — Substrate
+# wfrp4e-misfortune — Substrate
 
 ## What Is This Project?
 
-fvtt-prototypes is a Foundry Virtual Tabletop module for prototyping and experimenting with custom functionality. It is built with plain JavaScript (ES Modules) and loaded directly by Foundry VTT — no build step required.
+wfrp4e-misfortune is a Foundry Virtual Tabletop module that implements a homebrew metacurrency for Warhammer Fantasy Roleplay 4th Edition. When any non-GM player rolls an 88 on a d100 test, the GM accumulates a Misfortune point — a dark reflection of Fortune that can be spent to reroll any NPC test.
 
 ## Navigation
 
@@ -13,23 +13,27 @@ fvtt-prototypes is a Foundry Virtual Tabletop module for prototyping and experim
 
 ## Key Concepts
 
-- **Module Manifest** (`module.json`): Declares the module's identity, compatibility range, scripts, styles, and dependencies to Foundry VTT.
-- **Hooks**: Foundry's event system. Modules use `Hooks.on()` and `Hooks.once()` to react to application lifecycle events (e.g., `init`, `ready`, `renderApplication`).
-- **Documents & Data Models**: Foundry's data layer. Actors, Items, Scenes, and other entities are "Documents" backed by a schema-driven data model.
-- **Applications (AppV2)**: Foundry's UI framework for rendering sheets, dialogs, and sidebars using Handlebars templates.
+- **Misfortune Pool**: A persistent counter of points the GM can spend. Stored in world settings and synced across clients via sockets.
+- **Trigger Value**: The d100 roll result (default 88) that causes a Misfortune point to be earned. Configurable in settings.
+- **Roll Hooks**: The module listens to all WFRP4e roll test hooks (`wfrp4e:rollTest`, `wfrp4e:rollWeaponTest`, etc.) to detect the trigger value.
+- **Tracker Widget**: A floating grimdark UI element that displays the current pool and provides GM controls (spend, add, reset).
+- **Chat Commands**: `/misfortune` (or `/mf`) for quick status, spending, resetting, and help.
+- **Module API**: Exposed at `game.modules.get("wfrp4e-misfortune").api` for macros and other modules.
 
 ## Module Identity
 
-- **Module ID**: `fvtt-prototypes`
-- **Namespace prefix**: `fvtt-prototypes` (used for CSS classes, hooks, flags, and socket events)
+- **Module ID**: `wfrp4e-misfortune`
+- **Namespace prefix**: `wfrp4e-misfortune` (used for CSS classes, hooks, flags, and socket events)
 
 ## Compatibility
 
-Target the Foundry VTT V12+ API unless otherwise specified.
+- **Foundry VTT**: V13+
+- **WFRP4e System**: v9.0.0+ (verified 9.3.2)
 
 ## Conventions
 
 - All module scripts use ES module syntax (`import`/`export`).
-- CSS classes are prefixed with the module ID: `.fvtt-prototypes--element`.
-- Flags stored on documents use the module ID as the scope: `document.getFlag('fvtt-prototypes', 'key')`.
-- Socket events are namespaced: `module.fvtt-prototypes`.
+- CSS classes are prefixed with the module ID: `.wfrp4e-misfortune--element`.
+- Socket events are namespaced: `module.wfrp4e-misfortune`.
+- Shared constants (module ID, setting keys, thematic messages) live in `scripts/constants.js`.
+- Only the GM client processes roll hooks and writes to world settings, preventing duplicate triggers.

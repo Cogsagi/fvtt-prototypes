@@ -11,14 +11,11 @@ Foundry VTT modules follow a hook-driven lifecycle:
 └─────────┘     └──────┘     └───────┘     └─────────────────┘
 ```
 
-- **`init`**: Register settings, configure module state. No world data is available yet.
-- **`setup`**: World data is loaded. Register additional configuration that depends on system/world context.
-- **`ready`**: Foundry is fully initialized. Safe to interact with the canvas, sidebar, and all documents.
-- **`renderApplication`**: Fired when a UI application renders. Used to inject HTML or modify sheets.
+- **`init`**: Register settings via `registerSettings()`. No world data yet.
+- **`ready`**: Register roll hooks, socket listeners, chat commands, render tracker, expose API.
+- **`canvasReady`**: Re-render the tracker on scene changes.
 
 ## Entry Point
-
-The module's main script is registered in `module.json` under `esmodules`. Foundry loads it as an ES module during the `init` phase.
 
 ```json
 {
@@ -26,25 +23,32 @@ The module's main script is registered in `module.json` under `esmodules`. Found
 }
 ```
 
-`scripts/main.js` should register hooks and bootstrap module functionality.
+`scripts/main.js` imports all subsystems and wires them into the hook lifecycle.
 
 ## Directory Layout
 
 ```
 scripts/
-├── main.js              # Entry point — hook registration
+├── main.js              # Entry point — hook registration and API exposure
+├── constants.js         # Module ID, setting keys, socket name, thematic messages
 ├── settings.js          # Game settings (registerSetting calls)
-├── hooks/               # Hook handler functions, grouped by lifecycle phase
-└── apps/                # Application classes (sheets, dialogs)
+├── misfortune-pool.js   # Pool CRUD: getPool, setPool, addMisfortune, spendMisfortune, resetPool
+├── chat-commands.js     # /misfortune and /mf chat command handler
+├── socket.js            # Socket listener for cross-client tracker sync
+├── hooks/
+│   └── roll-hooks.js    # WFRP4e roll test hook listeners (88 detection)
+└── apps/
+    ├── tracker.js       # Floating tracker widget (renderTracker, updateTrackerDisplay)
+    └── log-viewer.js    # MisfortuneLogViewer Application class
 
 styles/
-└── module.css           # All module styles, prefixed with module ID
+└── module.css           # Grimdark-themed styles for tracker, chat messages, and log viewer
 
 templates/
-└── *.hbs                # Handlebars templates for Application classes
+└── log-viewer.hbs       # Handlebars template for the event log
 
 languages/
-└── en.json              # English localization strings
+└── en.json              # English localization strings for settings
 ```
 
 ## Component Patterns
@@ -55,39 +59,52 @@ Register settings during the `init` hook:
 
 ```js
 Hooks.once('init', () => {
-  game.settings.register('fvtt-prototypes', 'mySetting', {
-    name: 'My Setting',
-    hint: 'Description of what this does.',
-    scope: 'world',
-    config: true,
-    type: Boolean,
-    default: false
-  });
+  registerSettings();
 });
 ```
 
-### Sheet Injection
+Settings include the pool counter (hidden), event log (hidden), player visibility toggle, trigger value, and chat flavor toggle.
 
-Inject content into existing sheets via `render` hooks:
+### Roll Hook Detection
+
+Listen to all WFRP4e roll hooks. Only the GM client processes them to avoid duplicates:
 
 ```js
-Hooks.on('renderActorSheet', (app, html, data) => {
-  // Add module UI to the actor sheet
-});
+const WFRP_ROLL_HOOKS = [
+  'wfrp4e:rollTest',
+  'wfrp4e:rollWeaponTest',
+  'wfrp4e:rollCastTest',
+  'wfrp4e:rollChannelTest',
+  'wfrp4e:rollPrayerTest',
+  'wfrp4e:rollTraitTest',
+  'wfrp4e:rollIncomeTest'
+];
 ```
 
 ### Socket Communication
 
-For multi-client features, use Foundry's socket system:
+Real-time sync of the tracker across all connected clients:
 
 ```js
-// Emitting
-game.socket.emit('module.fvtt-prototypes', { action: 'doThing', payload });
+// Emitting (after pool change)
+game.socket.emit('module.wfrp4e-misfortune', { action: 'updateTracker', pool });
 
 // Receiving
-game.socket.on('module.fvtt-prototypes', ({ action, payload }) => {
-  if (action === 'doThing') handleDoThing(payload);
+game.socket.on('module.wfrp4e-misfortune', ({ action, pool }) => {
+  if (action === 'updateTracker') updateTrackerDisplay(pool);
 });
+```
+
+### Module API
+
+Exposed at `game.modules.get("wfrp4e-misfortune").api`:
+
+```js
+api.getPool();                          // Returns current count
+api.addMisfortune("Player Name", 88);   // Add 1 point
+api.spendMisfortune();                  // Spend 1 point
+api.resetPool();                        // Reset to 0
+api.renderTracker();                    // Re-render the UI widget
 ```
 
 ## Foundry API References
@@ -96,3 +113,4 @@ game.socket.on('module.fvtt-prototypes', ({ action, payload }) => {
 - **Canvas**: `canvas.tokens`, `canvas.tiles`, `canvas.drawings`
 - **UI**: `ui.notifications`, `ui.sidebar`, `Dialog`, `Application`
 - **Utilities**: `foundry.utils.mergeObject()`, `foundry.utils.duplicate()`
+- **WFRP4e Hooks**: `wfrp4e:rollTest`, `wfrp4e:rollWeaponTest`, etc.

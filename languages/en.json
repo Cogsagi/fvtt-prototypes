@@ -1,0 +1,8 @@
+{
+  "FVTT-PROTOTYPES": {
+    "Settings": {
+      "EnablePrototypes": "Enable Prototypes",
+      "EnablePrototypesHint": "Enable or disable the prototypes module functionality."
+    }
+  }
+}
